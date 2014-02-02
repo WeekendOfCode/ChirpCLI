@@ -4,8 +4,8 @@ module.exports = {
     'access_token_key': '',
     'access_token_secret': '',
     'irc': false,
-    'irc-nick': '',
-    'irc-user': '',
+    'irc-nick': 'nodejstweets',
+    'irc-user': 'chirpcli34',
     'irc-pass': '',
-    'irc-channel': ''
+    'irc-channel': '#node.js'
 }

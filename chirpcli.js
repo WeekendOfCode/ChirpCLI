@@ -130,6 +130,21 @@ function home() {
         self();
     });
 }
+function userfeed() {
+    twit.get('/statuses/user_timeline.json', options, function (data) {
+        main.add('Fetched data');
+        main.down();
+        screen.render();
+        data.reverse();
+        data.forEach(function (tweet) {
+            if (tweet.user) {
+                main.add('@'.blue + tweet.user.screen_name.blue + ': ' + tweet.text);
+                main.down();
+                screen.render();
+            }
+        });
+    });
+}
 twit.verifyCredentials(function (data) {
     id = data.id_str;
     if (!data.screen_name) {
@@ -180,6 +195,7 @@ twit.verifyCredentials(function (data) {
             list.add('Relay - Relay tracking data to IRC')
         }
         list.add('Home - View & stream home timeline');
+        list.add('User - View a user timeline');
         list.add('Help - View the help')
         list.on('select', function (data) {
             if (data.content == 'Help - View the help') {
@@ -190,6 +206,47 @@ twit.verifyCredentials(function (data) {
                 main.add('Controls:')
                 main.add('Press Q to quit | CTRL-T to quicktweet');
                 main.down()
+            }
+            if (data.content == 'User - View a user timeline') {
+                list.hide();
+                main.add('User selected');
+                main.down();
+                var form = blessed.form({
+                    parent: screen,
+                    width: '50%',
+                    height: '50%',
+                    top: 'center',
+                    left: 'center',
+                    content: 'Enter a username (without the @):',
+                    align: 'center',
+                    keys: true,
+                    border: {
+                        type: 'line'
+                    }
+                });
+                var input = blessed.textarea({
+                    parent: form,
+                    width: '30%',
+                    height: '15%',
+                    top: 'center',
+                    left: 'center',
+                    keys: true,
+                    border: {
+                        type: 'line'
+                    }
+                });
+                screen.append(form);
+                screen.append(input);
+                screen.render();
+                input.focus();
+                input.readInput();
+                input.key('enter', function () {
+                    form.hide();
+                    input.hide();
+                    screen.render();
+                    options.screen_name = input.value;
+                    userfeed();
+                });
             }
             if (data.content == 'Home - View & stream home timeline') {
                 list.hide();
