@@ -5,12 +5,8 @@ var util = require('util'),
     user = {},
     blessed = require('blessed');
 twitter = require('twitter');
-var twit = new twitter({
-    consumer_key: '',
-    consumer_secret: '',
-    access_token_key: '',
-    access_token_secret: ''
-});
+var json = require('./settings.js');
+var twit = new twitter(json);
 var options = {
     language: 'en',
     stall_warnings: 'true'
@@ -25,6 +21,7 @@ var main = blessed.list({
     width: '100%',
     height: '100%',
     tags: true,
+    keys: true,
     scrollable: true,
     alwaysScroll: true,
     border: {
@@ -86,7 +83,11 @@ function flood() {
 twit.verifyCredentials(function (data) {
     id = data.id_str;
     if (!data.screen_name) {
-        main.add('Failed to login. Maybe you didn\'t add keys?'.bold.red);
+        main.add('Failed to login.'.bold.red);
+        if (!json.consumer_key) {
+            main.add('Please fill settings.js with application keys.'.bold.red)
+            main.down();
+        }
         main.add('Press Q to exit');
         main.down();
         main.down();
@@ -104,6 +105,7 @@ twit.verifyCredentials(function (data) {
         height: '75%',
         top: 'center',
         left: 'center',
+        content: 'Menu',
         align: 'center',
         fg: 'blue',
         border: {
