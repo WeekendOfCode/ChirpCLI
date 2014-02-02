@@ -52,6 +52,9 @@ var box = blessed.box({
 screen.append(box);
 screen.append(main);
 screen.render();
+main.add('Logging in...');
+main.down();
+screen.render();
 
 function stream() {
     twit.stream('statuses/filter', options, function (stream) {
@@ -83,10 +86,13 @@ function flood() {
 twit.verifyCredentials(function (data) {
     id = data.id_str;
     if (!data.screen_name) {
-        console.log('Error.'.red);
-        console.log('You need to create an application at https://dev.twitter.com/apps, generate keys and secrets, and put them in this file.');
-        process.exit(1);
+        main.add('Failed to login. Maybe you didn\'t add keys?'.bold.red);
+        main.add('Press Q to exit');
+        main.down();
+        main.down();
+        screen.render();
     }
+    else {
     main.add('Logged in as @'.blue + data.screen_name.blue);
     main.down();
     box.setContent('{blue-fg}Logged in as @' + data.screen_name + '{/blue-fg}');
@@ -220,6 +226,7 @@ twit.verifyCredentials(function (data) {
         screen.render();
     });
     screen.render();
+    }
 });
 screen.key(['escape', 'q', 'C-c'], function (ch, key) {
     return process.exit(0);
