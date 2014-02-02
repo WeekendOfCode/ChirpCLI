@@ -130,6 +130,7 @@ function home() {
         self();
     });
 }
+
 function userfeed() {
     twit.get('/statuses/user_timeline.json', options, function (data) {
         main.add('Fetched data');
@@ -145,7 +146,9 @@ function userfeed() {
         });
     });
 }
-twit.verifyCredentials(function (data) {
+twit.verifyCredentials(start);
+
+function start(data) {
     id = data.id_str;
     if (!data.screen_name) {
         main.add('Failed to login.'.bold.red);
@@ -189,6 +192,7 @@ twit.verifyCredentials(function (data) {
             vi: true
         });
         screen.append(list);
+        list.focus();
         list.add('Tweet - Send a tweet');
         list.add('Track - Track a keyword or hashtag');
         if (json.irc) {
@@ -204,7 +208,7 @@ twit.verifyCredentials(function (data) {
                 main.add('ChirpCLI is a twitter client for terminals.')
                 main.add('http://blog.whiskers75.com/chirpcli-twitter-cli-in-node-js-weekend-of-code-1/')
                 main.add('Controls:')
-                main.add('Press Q to quit | CTRL-T to quicktweet');
+                main.add('Press Q to quit | CTRL-T to quicktweet | CTRL-R to return to main menu');
                 main.down()
             }
             if (data.content == 'User - View a user timeline') {
@@ -411,13 +415,16 @@ twit.verifyCredentials(function (data) {
                 screen.render();
             })
         });
-        input.key('escape', function() {
+        input.key('escape', function () {
             form.hide();
             input.hide();
             screen.render();
         })
     });
-});
+};
 screen.key(['escape', 'q', 'C-c'], function (ch, key) {
     return process.exit(0);
+});
+screen.key('C-r', function() {
+    twit.verifyCredentials(start);
 });
