@@ -365,6 +365,11 @@ function start(data) {
         });
         screen.render();
     }
+
+};
+screen.key(['escape', 'q', 'C-c'], function (ch, key) {
+    return process.exit(0);
+});
     screen.key('C-t', function () {
         main.add('Quick-Tweet activated!'.blue);
         main.down();
@@ -421,10 +426,6 @@ function start(data) {
             screen.render();
         })
     });
-};
-screen.key(['escape', 'q', 'C-c'], function (ch, key) {
-    return process.exit(0);
-});
 screen.key('C-r', function() {
     twit.verifyCredentials(start);
 });
