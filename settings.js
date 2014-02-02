@@ -3,9 +3,9 @@ module.exports = {
     'consumer_secret': '',
     'access_token_key': '',
     'access_token_secret': '',
-    'irc': false, //Enable IRC relaying
-    'irc-nick': 'yourcoolnick',
-    'irc-user': 'yourcoolusername',
-    'irc-pass': 'yourcoolpassword',
-    'irc-channel': '#yourawesomechannel'
+    'irc': false,
+    'irc-nick': '',
+    'irc-user': '',
+    'irc-pass': '',
+    'irc-channel': ''
 }

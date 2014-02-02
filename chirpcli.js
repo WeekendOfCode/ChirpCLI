@@ -2,9 +2,11 @@ var util = require('util'),
     colors = require('colors'),
     read = require('read'),
     id = 0,
+    form = {},
+    input = {},
     user = {},
     irc = require('slate-irc');
-    blessed = require('blessed');
+blessed = require('blessed');
 twitter = require('twitter');
 var json = require('./settings.js');
 var twit = new twitter(json);
@@ -53,12 +55,12 @@ screen.render();
 main.add('Logging in...');
 main.down();
 if (json.irc) {
-var net = require('net');
+    var net = require('net');
 
-var stream = net.connect({
-  port: 6667,
-  host: 'irc.freenode.org'
-});
+    var stream = net.connect({
+        port: 6667,
+        host: 'irc.freenode.org'
+    });
     main.add('Connecting to Freenode...');
     main.down();
     var client = irc(stream);
@@ -66,7 +68,7 @@ var stream = net.connect({
     client.nick(json['irc-nick']);
     client.user(json['irc-user'], 'ChirpCLI')
     client.join(json['irc-channel']);
-    client.names(json['irc-channel'], function() {
+    client.names(json['irc-channel'], function () {
         main.add('Connected');
         main.down();
     });
@@ -91,16 +93,41 @@ function track(irc) {
     });
 }
 
-function flood() {
-    twit.stream('statuses/sample', function (stream) {
+function self() {
+    twit.stream('user', function (stream) {
+        main.add('Now streaming your home timeline - scroll with arrow keys'.blue);
+        main.down();
+        screen.render();
+        main.focus();
         stream.on('data', function (data) {
             if (data.user) {
-                console.log('@'.blue + data.user.screen_name.blue, data.text);
+                main.add('@'.blue + data.user.screen_name.blue + ': ' + data.text);
+                main.down();
+                screen.render();
             }
             if (data.warning) {
                 console.log(data.warning.message.red)
             }
         });
+    });
+}
+
+function home() {
+    twit.get('/statuses/home_timeline.json', {
+        include_entities: true
+    }, function (data) {
+        main.add('Fetched home data');
+        main.down();
+        screen.render();
+        data.reverse();
+        data.forEach(function (tweet) {
+            if (tweet.user) {
+                main.add('@'.blue + tweet.user.screen_name.blue + ': ' + tweet.text);
+                main.down();
+                screen.render();
+            }
+        });
+        self();
     });
 }
 twit.verifyCredentials(function (data) {
@@ -115,150 +142,224 @@ twit.verifyCredentials(function (data) {
         main.down();
         main.down();
         screen.render();
-    }
-    else {
-    main.add('Logged in as @'.blue + data.screen_name.blue);
-    main.down();
-    box.setContent('{blue-fg}Logged in as @' + data.screen_name + '{/blue-fg}');
-    screen.render();
-    box.hide();
-    var list = blessed.list({
-        parent: screen,
-        width: '75%',
-        height: '75%',
-        top: 'center',
-        left: 'center',
-        content: 'Menu',
-        align: 'center',
-        fg: 'blue',
-        border: {
-            type: 'line'
-        },
-        selectedBg: 'green',
+    } else {
+        main.add('Logged in as @'.blue + data.screen_name.blue);
+        main.add('Tip: Use CTRL-T to launch the tweet box whilst streaming');
+        main.down();
+        main.down();
+        box.setContent('{blue-fg}Logged in as @' + data.screen_name + '{/blue-fg}');
+        screen.render();
+        box.hide();
+        var list = blessed.list({
+            parent: screen,
+            width: '75%',
+            height: '75%',
+            top: 'center',
+            left: 'center',
+            content: 'Menu',
+            align: 'center',
+            fg: 'blue',
+            border: {
+                type: 'line'
+            },
+            selectedBg: 'green',
 
-        // Allow mouse support
-        mouse: true,
+            // Allow mouse support
+            mouse: true,
 
-        // Allow key support (arrow keys + enter)
-        keys: true,
+            // Allow key support (arrow keys + enter)
+            keys: true,
 
-        // Use vi built-in keys
-        vi: true
-    });
-    screen.append(list);
-    list.add('Tweet - Send a tweet');
-    list.add('Track - Track a keyword or hashtag');
+            // Use vi built-in keys
+            vi: true
+        });
+        screen.append(list);
+        list.add('Tweet - Send a tweet');
+        list.add('Track - Track a keyword or hashtag');
         if (json.irc) {
-        list.add('Relay - Relay tracking data to IRC')
+            list.add('Relay - Relay tracking data to IRC')
         }
-    list.on('select', function (data) {
-        if (data.content == 'Tweet - Send a tweet') {
-            list.hide();
-            main.add('Tweet selected');
-            main.down();
-            var form = blessed.form({
-                parent: screen,
-                width: '50%',
-                height: '50%',
-                top: 'center',
-                left: 'center',
-                content: 'Enter a tweet:',
-                align: 'center',
-                keys: true,
-                border: {
-                    type: 'line'
-                }
-            });
-            var input = blessed.textarea({
-                parent: form,
-                width: '50%',
-                height: '30%',
-                top: 'center',
-                left: 'center',
-                keys: true,
-                border: {
-                    type: 'line'
-                }
-            });
-            screen.append(form);
-            screen.append(input);
-            screen.render();
-            input.focus();
-            input.readInput();
-            input.key('enter', function () {
-                form.hide();
-                input.hide();
-                screen.render();
-                main.add('tweeting '.blue + input.value);
+        list.add('Home - View & stream home timeline');
+        list.add('Help - View the help')
+        list.on('select', function (data) {
+            if (data.content == 'Help - View the help') {
+                list.hide();
+                main.add('Help'.bold);
+                main.add('ChirpCLI is a twitter client for terminals.')
+                main.add('http://blog.whiskers75.com/chirpcli-twitter-cli-in-node-js-weekend-of-code-1/')
+                main.add('Controls:')
+                main.add('Press Q to quit | CTRL-T to quicktweet');
+                main.down()
+            }
+            if (data.content == 'Home - View & stream home timeline') {
+                list.hide();
+                home();
+                main.add('Fetching data...')
                 main.down();
                 screen.render();
-                twit.updateStatus(input.value, function(result) {
-                    if (result.id) {
-                        main.add('tweet sent!'.green);
-                        main.down();
+            }
+            if (data.content == 'Tweet - Send a tweet') {
+                list.hide();
+                main.add('Tweet selected');
+                main.down();
+                var form = blessed.form({
+                    parent: screen,
+                    width: '50%',
+                    height: '50%',
+                    top: 'center',
+                    left: 'center',
+                    content: 'Enter a tweet:',
+                    align: 'center',
+                    keys: true,
+                    border: {
+                        type: 'line'
                     }
-                    else {
-                        main.add('failed to send'.red);
-                        main.down();
+                });
+                var input = blessed.textarea({
+                    parent: form,
+                    width: '50%',
+                    height: '30%',
+                    top: 'center',
+                    left: 'center',
+                    keys: true,
+                    border: {
+                        type: 'line'
                     }
+                });
+                screen.append(form);
+                screen.append(input);
+                screen.render();
+                input.focus();
+                input.readInput();
+                input.key('enter', function () {
+                    form.hide();
+                    input.hide();
                     screen.render();
-                    setTimeout(function() {
-                        process.exit(0);
-                    }, 3000);
-                })
-            });
-        }
-        if (data.content == 'Track - Track a keyword or hashtag' || data.content == 'Relay - Relay tracking data to IRC') {
-            list.hide();
-            main.add('Track selected');
-            main.down();
-            var form = blessed.form({
-                parent: screen,
-                width: '50%',
-                height: '50%',
-                top: 'center',
-                left: 'center',
-                content: 'Please enter a keyword:',
-                align: 'center',
-                keys: true,
-                border: {
-                    type: 'line'
-                }
-            });
-            var input = blessed.textarea({
-                parent: form,
-                width: '30%',
-                height: '15%',
-                top: 'center',
-                left: 'center',
-                keys: true,
-                border: {
-                    type: 'line'
-                }
-            });
-            screen.append(form);
-            screen.append(input);
+                    main.add('tweeting '.blue + input.value);
+                    main.down();
+                    screen.render();
+                    twit.updateStatus(input.value, function (result) {
+                        if (result.id) {
+                            main.add('tweet sent!'.green);
+                            main.down();
+                        } else {
+                            main.add('failed to send'.red);
+                            main.down();
+                        }
+                        screen.render();
+                        setTimeout(function () {
+                            process.exit(0);
+                        }, 3000);
+                    })
+                });
+            }
+            if (data.content == 'Track - Track a keyword or hashtag' || data.content == 'Relay - Relay tracking data to IRC') {
+                list.hide();
+                main.add('Track selected');
+                main.down();
+                var form = blessed.form({
+                    parent: screen,
+                    width: '50%',
+                    height: '50%',
+                    top: 'center',
+                    left: 'center',
+                    content: 'Please enter a keyword:',
+                    align: 'center',
+                    keys: true,
+                    border: {
+                        type: 'line'
+                    }
+                });
+                var input = blessed.textarea({
+                    parent: form,
+                    width: '30%',
+                    height: '15%',
+                    top: 'center',
+                    left: 'center',
+                    keys: true,
+                    border: {
+                        type: 'line'
+                    }
+                });
+                screen.append(form);
+                screen.append(input);
+                screen.render();
+                input.focus();
+                input.readInput();
+                input.key('enter', function () {
+                    options.track = input.value;
+                    main.add('Tracking ' + options.track.bold + ' (ESC, Q or Ctrl-C to quit)');
+                    if (data.content == 'Relay - Relay tracking data to IRC') {
+                        main.add('Relaying to IRC');
+                        main.down();
+                    }
+                    main.down();
+                    form.hide();
+                    input.hide();
+                    track(data.content == 'Relay - Relay tracking data to IRC');
+                    screen.render();
+                });
+            }
             screen.render();
-            input.focus();
-            input.readInput();
-            input.key('enter', function () {
-                options.track = input.value;
-                main.add('Tracking ' + options.track.bold + ' (ESC, Q or Ctrl-C to quit)');
-                if (data.content == 'Relay - Relay tracking data to IRC') {
-                    main.add('Relaying to IRC');
+        });
+        screen.render();
+    }
+    screen.key('C-t', function () {
+        main.add('Quick-Tweet activated!'.blue);
+        main.down();
+        var form = blessed.form({
+            parent: screen,
+            width: '50%',
+            height: '50%',
+            top: 'center',
+            left: 'center',
+            content: 'Enter a tweet:',
+            align: 'center',
+            keys: true,
+            border: {
+                type: 'line'
+            }
+        });
+        var input = blessed.textarea({
+            parent: form,
+            width: '50%',
+            height: '30%',
+            top: 'center',
+            left: 'center',
+            keys: true,
+            border: {
+                type: 'line'
+            }
+        });
+        screen.append(form);
+        screen.append(input);
+        screen.render();
+        input.focus();
+        input.readInput();
+        input.key('enter', function () {
+            form.hide();
+            input.hide();
+            screen.render();
+            main.add('tweeting '.blue + input.value);
+            main.down();
+            screen.render();
+            twit.updateStatus(input.value, function (result) {
+                if (result.id) {
+                    main.add('tweet sent!'.green);
+                    main.down();
+                } else {
+                    main.add('failed to send'.red);
                     main.down();
                 }
-                main.down();
-                form.hide();
-                input.hide();
-                track(data.content == 'Relay - Relay tracking data to IRC');
                 screen.render();
-            });
-        }
-        screen.render();
+            })
+        });
+        input.key('escape', function() {
+            form.hide();
+            input.hide();
+            screen.render();
+        })
     });
-    screen.render();
-    }
 });
 screen.key(['escape', 'q', 'C-c'], function (ch, key) {
     return process.exit(0);
