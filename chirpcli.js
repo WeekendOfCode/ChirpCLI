@@ -3,6 +3,7 @@ var util = require('util'),
     read = require('read'),
     id = 0,
     user = {},
+    irc = require('slate-irc');
     blessed = require('blessed');
 twitter = require('twitter');
 var json = require('./settings.js');
@@ -51,14 +52,36 @@ screen.append(main);
 screen.render();
 main.add('Logging in...');
 main.down();
+if (json.irc) {
+var net = require('net');
+
+var stream = net.connect({
+  port: 6667,
+  host: 'irc.freenode.org'
+});
+    main.add('Connecting to Freenode...');
+    main.down();
+    var client = irc(stream);
+    client.pass(json['irc-pass'])
+    client.nick(json['irc-nick']);
+    client.user(json['irc-user'], 'ChirpCLI')
+    client.join(json['irc-channel']);
+    client.names(json['irc-channel'], function() {
+        main.add('Connected');
+        main.down();
+    });
+}
 screen.render();
 
-function stream() {
+function track(irc) {
     twit.stream('statuses/filter', options, function (stream) {
         stream.on('data', function (data) {
             if (data.user) {
                 main.add('@'.blue + data.user.screen_name.blue + ': ' + data.text.replace(options.track, options.track.yellow));
                 main.down();
+                if (irc) {
+                    client.send(json['irc-channel'], '@' + data.user.screen_name + ': ' + data.text);
+                }
                 screen.render();
             }
             if (data.warning) {
@@ -125,6 +148,9 @@ twit.verifyCredentials(function (data) {
     screen.append(list);
     list.add('Tweet - Send a tweet');
     list.add('Track - Track a keyword or hashtag');
+        if (json.irc) {
+        list.add('Relay - Relay tracking data to IRC')
+        }
     list.on('select', function (data) {
         if (data.content == 'Tweet - Send a tweet') {
             list.hide();
@@ -182,7 +208,7 @@ twit.verifyCredentials(function (data) {
                 })
             });
         }
-        if (data.content == 'Track - Track a keyword or hashtag') {
+        if (data.content == 'Track - Track a keyword or hashtag' || data.content == 'Relay - Relay tracking data to IRC') {
             list.hide();
             main.add('Track selected');
             main.down();
@@ -218,10 +244,14 @@ twit.verifyCredentials(function (data) {
             input.key('enter', function () {
                 options.track = input.value;
                 main.add('Tracking ' + options.track.bold + ' (ESC, Q or Ctrl-C to quit)');
+                if (data.content == 'Relay - Relay tracking data to IRC') {
+                    main.add('Relaying to IRC');
+                    main.down();
+                }
                 main.down();
                 form.hide();
                 input.hide();
-                stream();
+                track(data.content == 'Relay - Relay tracking data to IRC');
                 screen.render();
             });
         }
